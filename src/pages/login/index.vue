@@ -10,7 +10,6 @@
     <view class="header">
       <view class="logo-box">
         <view class="logo-placeholder">
-          <!-- Logo 占位符，后续替换为 <image src="..." class="logo-img" /> -->
           <view class="logo-diamond"/>
         </view>
       </view>
@@ -31,7 +30,7 @@
           placeholder-class="input-placeholder"
           maxlength="11"
           @focus="focusField = 'phone'"
-          @blur="focusField = ''"
+          @blur="onPhoneBlur"
         />
       </view>
 
@@ -91,6 +90,7 @@
         </view>
       </view>
 
+      <!-- 图形验证码（仅验证码模式） -->
       <view
         v-if="mode === 'sms'"
         class="input-wrap captcha-wrap"
@@ -106,7 +106,13 @@
           @focus="focusField = 'captcha'"
           @blur="focusField = ''"
         />
-        <image class="captcha-img" :src="captchaUrl" mode="aspectFit" @click="refreshCaptcha"/>
+        <view class="captcha-box" @click="refreshCaptcha">
+          <image
+            class="captcha-img"
+            :src="captchaUrl"
+            mode="aspectFit"
+          />
+        </view>
       </view>
 
       <!-- 切换 & 忘记密码 -->
@@ -182,7 +188,7 @@
             placeholder-class="input-placeholder"
             maxlength="11"
             @focus="focusField = 'r-phone'"
-            @blur="focusField = ''"
+            @blur="onResetPhoneBlur"
           />
         </view>
 
@@ -221,7 +227,13 @@
             @focus="focusField = 'r-captcha'"
             @blur="focusField = ''"
           />
-          <image class="captcha-img" :src="resetCaptchaUrl" mode="aspectFit" @click="refreshResetCaptcha"/>
+          <view class="captcha-box" @click="refreshResetCaptcha">
+            <image
+              class="captcha-img"
+              :src="resetCaptchaUrl"
+              mode="aspectFit"
+            />
+          </view>
         </view>
 
         <view class="input-wrap" :class="{ 'input-wrap--focus': focusField === 'r-pwd' }">
@@ -258,9 +270,32 @@
 
 <script setup lang="ts">
 import Taro from '@tarojs/taro'
-import {computed, reactive, ref, onUnmounted} from 'vue'
+import {reactive, ref, onUnmounted, watch} from 'vue'
 import {passwordLogin, sendSmsCode, smsLogin, resetPassword, wechatLogin} from '@/api/auth'
 import {getToken, setToken, setUser} from '@/services/storage'
+
+/*
+ * 图形验证码接口：GET /saas/captcha/{username}
+ * 直接返回图片，<image :src="url" /> 加载即可。
+ *
+ * API_BASE 由 config/index.ts 的 defineConstants 注入，
+ * 值为 'http://127.0.0.1:8887/saas'（开发环境）。
+ *
+ * 声明一下让 TS 不报错：
+ */
+declare const API_BASE: string
+
+/** 手机号正则：1 开头，第二位 3-9，共 11 位 */
+const PHONE_REG = /^1[3-9]\d{9}$/
+
+function isValidPhone(phone: string): boolean {
+  return PHONE_REG.test(phone)
+}
+
+/** 构建验证码图片 URL — ?t= 时间戳防缓存 */
+function buildCaptchaUrl(phone: string): string {
+  return `${API_BASE}/captcha/${phone}?t=${Date.now()}`
+}
 
 const loading = ref(false)
 const agree = ref(true)
@@ -275,18 +310,70 @@ const resetLoading = ref(false)
 const form = reactive({username: '', password: '', verifyCode: '', captcha: ''})
 const resetForm = reactive({phone: '', verifyCode: '', password: '', captcha: ''})
 
-const captchaSeed = ref(Date.now())
-const resetCaptchaSeed = ref(Date.now())
+/* ==========================================================
+ * 图形验证码
+ * ========================================================== */
 
-const captchaUrl = computed(() => {
-  const phone = form.username || '0'
-  return `${API_BASE}/captcha/${phone}?t=${captchaSeed.value}`
+let lastCaptchaPhone = ''
+let lastResetCaptchaPhone = ''
+
+const captchaUrl = ref('')
+const resetCaptchaUrl = ref('')
+
+/** 刷新登录验证码（点击图片 / 发送失败 / 手机号输完失焦） */
+function refreshCaptcha() {
+  const phone = form.username
+  if (!isValidPhone(phone)) {
+    Taro.showToast({title: '请先输入正确的手机号', icon: 'none'})
+    return
+  }
+  // 先清空再赋值，确保小程序 image 组件检测到 src 变化并重新请求
+  captchaUrl.value = ''
+  setTimeout(() => {
+    captchaUrl.value = buildCaptchaUrl(phone)
+  }, 50)
+  lastCaptchaPhone = phone
+  form.captcha = ''
+}
+
+/** 刷新重置密码验证码 */
+function refreshResetCaptcha() {
+  const phone = resetForm.phone
+  if (!isValidPhone(phone)) {
+    Taro.showToast({title: '请先输入正确的手机号', icon: 'none'})
+    return
+  }
+  resetCaptchaUrl.value = ''
+  setTimeout(() => {
+    resetCaptchaUrl.value = buildCaptchaUrl(phone)
+  }, 50)
+  lastResetCaptchaPhone = phone
+  resetForm.captcha = ''
+}
+
+/** 手机号失焦 — 格式正确且号码变化时自动刷新 */
+function onPhoneBlur() {
+  focusField.value = ''
+  if (isValidPhone(form.username) && form.username !== lastCaptchaPhone) {
+    refreshCaptcha()
+  }
+}
+
+function onResetPhoneBlur() {
+  focusField.value = ''
+  if (isValidPhone(resetForm.phone) && resetForm.phone !== lastResetCaptchaPhone) {
+    refreshResetCaptcha()
+  }
+}
+
+/** 切换到验证码模式时，手机号合法且未加载过则自动加载 */
+watch(mode, (val) => {
+  if (val === 'sms' && isValidPhone(form.username) && !captchaUrl.value) {
+    refreshCaptcha()
+  }
 })
 
-const resetCaptchaUrl = computed(() => {
-  const phone = resetForm.phone || '0'
-  return `${API_BASE}/captcha/${phone}?t=${resetCaptchaSeed.value}`
-})
+/* ===== 其余逻辑不变 ===== */
 
 let codeTimer: ReturnType<typeof setInterval> | null = null
 let resetTimer: ReturnType<typeof setInterval> | null = null
@@ -329,20 +416,14 @@ function startCountdown(type: 'code' | 'reset') {
   }
 }
 
-function refreshCaptcha() {
-  captchaSeed.value = Date.now()
-  form.captcha = ''
-}
-
-function refreshResetCaptcha() {
-  resetCaptchaSeed.value = Date.now()
-  resetForm.captcha = ''
-}
-
 async function handleSendCode() {
   if (codeCountdown.value > 0) return
   if (!form.username) {
     Taro.showToast({title: '请输入手机号', icon: 'none'});
+    return
+  }
+  if (!isValidPhone(form.username)) {
+    Taro.showToast({title: '请输入正确的手机号', icon: 'none'});
     return
   }
   if (!form.captcha) {
@@ -372,6 +453,10 @@ async function handleLogin() {
   }
   if (!form.username) {
     Taro.showToast({title: '请输入手机号', icon: 'none'});
+    return
+  }
+  if (!isValidPhone(form.username)) {
+    Taro.showToast({title: '请输入正确的手机号', icon: 'none'});
     return
   }
   if (mode.value === 'password' && !form.password) {
@@ -433,6 +518,10 @@ async function handleSendResetCode() {
   if (resetCountdown.value > 0) return
   if (!resetForm.phone) {
     Taro.showToast({title: '请输入手机号', icon: 'none'});
+    return
+  }
+  if (!isValidPhone(resetForm.phone)) {
+    Taro.showToast({title: '请输入正确的手机号', icon: 'none'});
     return
   }
   if (!resetForm.captcha) {
@@ -664,13 +753,16 @@ onUnmounted(() => {
   padding-right: 12rpx;
 }
 
+.captcha-box {
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+
 .captcha-img {
   width: 160rpx;
   height: 72rpx;
   border-radius: 10rpx;
   background-color: #f3f4f6;
-  margin-left: 12rpx;
-  flex-shrink: 0;
 }
 
 /* ===== 链接行 ===== */
