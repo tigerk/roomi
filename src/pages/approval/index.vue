@@ -40,8 +40,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useDidShow } from '@tarojs/taro'
-import { getTodoList, getDoneList, getApplyList, ApprovalItem } from '../../api/approval'
-import { ensureLoggedIn } from '../../services/auth'
+import { syncTabbarByRoute } from '@/utils/tabbar'
+import { getTodoList, getDoneList, getApplyList, ApprovalItem } from '@/api/approval'
+import { ensureLoggedIn } from '@/services/auth'
 
 const activeTab = ref('todo')
 const todoList = ref<ApprovalItem[]>([])
@@ -49,6 +50,7 @@ const doneList = ref<ApprovalItem[]>([])
 const applyList = ref<ApprovalItem[]>([])
 
 useDidShow(async () => {
+  syncTabbarByRoute()
   ensureLoggedIn()
   const [todoRes, doneRes, applyRes] = await Promise.all([
     getTodoList({ currentPage: 1, pageSize: 20 }),

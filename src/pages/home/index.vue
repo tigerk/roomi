@@ -20,6 +20,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useDidShow } from '@tarojs/taro'
+import { syncTabbarByRoute } from '@/utils/tabbar'
 import { getTodoCount } from '@/api/approval'
 import { ensureLoggedIn } from '@/services/auth'
 import { getUser } from '@/services/storage'
@@ -28,6 +29,7 @@ const todoCount = ref(0)
 const nickname = ref('')
 
 useDidShow(async () => {
+  syncTabbarByRoute()
   ensureLoggedIn()
   const user = getUser()
   nickname.value = user?.nickname || user?.username || ''

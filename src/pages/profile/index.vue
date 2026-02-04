@@ -17,12 +17,14 @@
 <script setup lang="ts">
 import Taro, { useDidShow } from '@tarojs/taro'
 import { computed, ref } from 'vue'
-import { ensureLoggedIn } from '../../services/auth'
-import { clearToken, clearUser, getUser, UserInfo } from '../../services/storage'
+import { ensureLoggedIn } from '@/services/auth'
+import { clearToken, clearUser, getUser, UserInfo } from '@/services/storage'
+import { syncTabbarByRoute } from '@/utils/tabbar'
 
 const user = ref<UserInfo | null>(null)
 
 useDidShow(() => {
+  syncTabbarByRoute()
   ensureLoggedIn()
   user.value = getUser()
 })

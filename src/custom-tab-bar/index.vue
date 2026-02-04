@@ -5,55 +5,103 @@
         v-for="item in tabs"
         :key="item.pagePath"
         class="tab-item"
-        :class="{ 'tab-item--active': item.pagePath === current }"
-        @click="handleSwitch(item.pagePath)"
+        :class="{ 'tab-item--active': selected === item.index }"
+        @click="handleSwitch(item)"
       >
         <image
           class="tab-icon"
-          :src="item.pagePath === current ? item.activeIcon : item.icon"
+          :src="selected === item.index ? item.activeIcon : item.icon"
           mode="aspectFit"
         />
         <text class="tab-text">{{ item.text }}</text>
       </view>
     </view>
-    <view class="tabbar-safe" />
+    <view class="tabbar-safe"/>
   </view>
 </template>
 
 <script setup lang="ts">
-import Taro, {useDidShow} from '@tarojs/taro'
+import Taro from '@tarojs/taro'
 import {ref} from 'vue'
 
-const tabs = [
-  { pagePath: 'pages/home/index', text: '工作台', icon: '/assets/tabbar/home.png', activeIcon: '/assets/tabbar/home-active.png' },
-  { pagePath: 'pages/room/index', text: '房源', icon: '/assets/tabbar/room.png', activeIcon: '/assets/tabbar/room-active.png' },
-  { pagePath: 'pages/contract/index', text: '合同', icon: '/assets/tabbar/contract.png', activeIcon: '/assets/tabbar/contract-active.png' },
-  { pagePath: 'pages/approval/index', text: '审批', icon: '/assets/tabbar/approval.png', activeIcon: '/assets/tabbar/approval-active.png' },
-  { pagePath: 'pages/profile/index', text: '我的', icon: '/assets/tabbar/profile.png', activeIcon: '/assets/tabbar/profile-active.png' }
+interface TabItem {
+  index: number
+  pagePath: string
+  text: string
+  icon: string
+  activeIcon: string
+}
+
+const tabs: TabItem[] = [
+  {
+    index: 0,
+    pagePath: '/pages/home/index',
+    text: '工作台',
+    icon: '/assets/tabbar/home.png',
+    activeIcon: '/assets/tabbar/home-active.png'
+  },
+  {
+    index: 1,
+    pagePath: '/pages/room/index',
+    text: '房源',
+    icon: '/assets/tabbar/room.png',
+    activeIcon: '/assets/tabbar/room-active.png'
+  },
+  {
+    index: 2,
+    pagePath: '/pages/contract/index',
+    text: '合同',
+    icon: '/assets/tabbar/contract.png',
+    activeIcon: '/assets/tabbar/contract-active.png'
+  },
+  {
+    index: 3,
+    pagePath: '/pages/approval/index',
+    text: '审批',
+    icon: '/assets/tabbar/approval.png',
+    activeIcon: '/assets/tabbar/approval-active.png'
+  },
+  {
+    index: 4,
+    pagePath: '/pages/profile/index',
+    text: '我的',
+    icon: '/assets/tabbar/profile.png',
+    activeIcon: '/assets/tabbar/profile-active.png'
+  }
 ]
 
-const current = ref('pages/home/index')
+// 当前选中的 index
+const selected = ref(0)
 
-useDidShow(() => {
-  const pages = Taro.getCurrentPages()
-  current.value = pages[pages.length - 1]?.route || ''
-})
+// 切换 Tab
+function handleSwitch(item: TabItem) {
+  if (selected.value === item.index) return
 
-function handleSwitch(path: string) {
-  if (path === current.value) return
-  Taro.switchTab({ url: `/${path}` })
+  Taro.switchTab({
+    url: item.pagePath,
+    success: () => {
+      selected.value = item.index
+    }
+  })
 }
+
+// 暴露方法供页面调用更新选中状态
+defineExpose({
+  setSelected: (index: number) => {
+    selected.value = index
+  }
+})
 </script>
 
-<style scoped>
+<style>
 .tabbar {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   background: #ffffff;
-  box-shadow: 0 -8rpx 24rpx rgba(15, 23, 42, 0.08);
-  z-index: 999;
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.08);
+  z-index: 9999;
 }
 
 .tabbar-inner {
@@ -71,14 +119,19 @@ function handleSwitch(path: string) {
   gap: 6rpx;
 }
 
+.tab-item:active {
+  opacity: 0.7;
+}
+
 .tab-icon {
-  width: 44rpx;
-  height: 44rpx;
+  width: 48rpx;
+  height: 48rpx;
 }
 
 .tab-text {
-  font-size: 26rpx;
+  font-size: 24rpx;
   color: #8a8f99;
+  line-height: 1.2;
 }
 
 .tab-item--active .tab-text {
