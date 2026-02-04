@@ -1,4 +1,5 @@
 import { defineConfig, type UserConfigExport } from '@tarojs/cli'
+import path from 'path'
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin'
 import devConfig from './dev'
 import prodConfig from './prod'
@@ -11,7 +12,7 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
   const baseConfig: UserConfigExport<'webpack5'> = {
     projectName: 'roomi',
     date: '2025-12-13',
-    designWidth (input) {
+    designWidth (input: any) {
       // 配置 NutUI 375 尺寸
       if (input?.file?.replace(/\\+/g, '/').indexOf('@nutui') > -1) {
         return 375
@@ -27,8 +28,12 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
     },
     sourceRoot: 'src',
     outputRoot: 'dist',
+    alias: {
+      '@': path.resolve(__dirname, '..', 'src')
+    },
     plugins: ['@tarojs/plugin-html'],
     defineConstants: {
+      API_BASE: JSON.stringify(process.env.TARO_APP_API_BASE || 'http://127.0.0.1:8887/saas')
     },
     copy: {
       patterns: [

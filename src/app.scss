@@ -1,0 +1,30 @@
+@import "@nutui/nutui-taro/dist/style.css";
+
+:root {
+  --nutui-brand-color: #3478f6;
+  --nutui-brand-color-start: #3478f6;
+  --nutui-brand-color-end: #5a8bff;
+}
+
+page {
+  background: #f6f7f9;
+  color: #1f2328;
+  font-size: 28rpx;
+}
+
+.container {
+  padding: 24rpx;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 12rpx 24rpx rgba(15, 23, 42, 0.06);
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
