@@ -1,4 +1,4 @@
-import { request } from '../services/http'
+import { request } from '@/services/http'
 
 export type UserLoginVO = {
   id: number
@@ -30,8 +30,8 @@ export function smsLogin(phone: string, verifyCode: string) {
   return request<UserLoginVO>({ url: 'login/sms', data: { phone, verifyCode } })
 }
 
-export function sendSmsCode(phone: string) {
-  return request<boolean>({ url: `login/sms/send?phone=${phone}`, method: 'POST', data: {} })
+export function sendSmsCode(phone: string, captcha: string) {
+  return request<boolean>({ url: `login/sms/send?phone=${phone}&captcha=${captcha}`, method: 'POST', data: {} })
 }
 
 export function resetPassword(phone: string, verifyCode: string, password: string) {

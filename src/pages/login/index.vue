@@ -91,6 +91,24 @@
         </view>
       </view>
 
+      <view
+        v-if="mode === 'sms'"
+        class="input-wrap captcha-wrap"
+        :class="{ 'input-wrap--focus': focusField === 'captcha' }"
+      >
+        <image class="input-icon" src="@/assets/icons/icon-shield.png" mode="aspectFit"/>
+        <input
+          class="input-el"
+          v-model="form.captcha"
+          placeholder="请输入图形验证码"
+          placeholder-class="input-placeholder"
+          maxlength="6"
+          @focus="focusField = 'captcha'"
+          @blur="focusField = ''"
+        />
+        <image class="captcha-img" :src="captchaUrl" mode="aspectFit" @click="refreshCaptcha"/>
+      </view>
+
       <!-- 切换 & 忘记密码 -->
       <view class="form-links">
         <view class="link-item" @click="toggleMode">
@@ -192,6 +210,20 @@
           </view>
         </view>
 
+        <view class="input-wrap captcha-wrap" :class="{ 'input-wrap--focus': focusField === 'r-captcha' }">
+          <image class="input-icon" src="@/assets/icons/icon-shield.png" mode="aspectFit"/>
+          <input
+            class="input-el"
+            v-model="resetForm.captcha"
+            placeholder="请输入图形验证码"
+            placeholder-class="input-placeholder"
+            maxlength="6"
+            @focus="focusField = 'r-captcha'"
+            @blur="focusField = ''"
+          />
+          <image class="captcha-img" :src="resetCaptchaUrl" mode="aspectFit" @click="refreshResetCaptcha"/>
+        </view>
+
         <view class="input-wrap" :class="{ 'input-wrap--focus': focusField === 'r-pwd' }">
           <image class="input-icon" src="@/assets/icons/icon-lock.png" mode="aspectFit"/>
           <input
@@ -226,7 +258,7 @@
 
 <script setup lang="ts">
 import Taro from '@tarojs/taro'
-import {reactive, ref, onUnmounted} from 'vue'
+import {computed, reactive, ref, onUnmounted} from 'vue'
 import {passwordLogin, sendSmsCode, smsLogin, resetPassword, wechatLogin} from '@/api/auth'
 import {getToken, setToken, setUser} from '@/services/storage'
 
@@ -240,8 +272,21 @@ const resetCountdown = ref(0)
 const showReset = ref(false)
 const resetLoading = ref(false)
 
-const form = reactive({username: '', password: '', verifyCode: ''})
-const resetForm = reactive({phone: '', verifyCode: '', password: ''})
+const form = reactive({username: '', password: '', verifyCode: '', captcha: ''})
+const resetForm = reactive({phone: '', verifyCode: '', password: '', captcha: ''})
+
+const captchaSeed = ref(Date.now())
+const resetCaptchaSeed = ref(Date.now())
+
+const captchaUrl = computed(() => {
+  const phone = form.username || '0'
+  return `${API_BASE}/captcha/${phone}?t=${captchaSeed.value}`
+})
+
+const resetCaptchaUrl = computed(() => {
+  const phone = resetForm.phone || '0'
+  return `${API_BASE}/captcha/${phone}?t=${resetCaptchaSeed.value}`
+})
 
 let codeTimer: ReturnType<typeof setInterval> | null = null
 let resetTimer: ReturnType<typeof setInterval> | null = null
@@ -284,22 +329,38 @@ function startCountdown(type: 'code' | 'reset') {
   }
 }
 
+function refreshCaptcha() {
+  captchaSeed.value = Date.now()
+  form.captcha = ''
+}
+
+function refreshResetCaptcha() {
+  resetCaptchaSeed.value = Date.now()
+  resetForm.captcha = ''
+}
+
 async function handleSendCode() {
   if (codeCountdown.value > 0) return
   if (!form.username) {
     Taro.showToast({title: '请输入手机号', icon: 'none'});
     return
   }
+  if (!form.captcha) {
+    Taro.showToast({title: '请输入图形验证码', icon: 'none'});
+    return
+  }
   try {
-    const res = await sendSmsCode(form.username)
+    const res = await sendSmsCode(form.username, form.captcha)
     if (res.code === 0) {
       startCountdown('code')
       Taro.showToast({title: '验证码已发送', icon: 'success'});
       return
     }
     Taro.showToast({title: res.message || '发送失败', icon: 'none'})
+    refreshCaptcha()
   } catch {
     Taro.showToast({title: '发送失败', icon: 'none'})
+    refreshCaptcha()
   }
 }
 
@@ -319,6 +380,10 @@ async function handleLogin() {
   }
   if (mode.value === 'sms' && !form.verifyCode) {
     Taro.showToast({title: '请输入验证码', icon: 'none'});
+    return
+  }
+  if (mode.value === 'sms' && !form.captcha) {
+    Taro.showToast({title: '请输入图形验证码', icon: 'none'});
     return
   }
 
@@ -370,16 +435,22 @@ async function handleSendResetCode() {
     Taro.showToast({title: '请输入手机号', icon: 'none'});
     return
   }
+  if (!resetForm.captcha) {
+    Taro.showToast({title: '请输入图形验证码', icon: 'none'});
+    return
+  }
   try {
-    const res = await sendSmsCode(resetForm.phone)
+    const res = await sendSmsCode(resetForm.phone, resetForm.captcha)
     if (res.code === 0) {
       startCountdown('reset')
       Taro.showToast({title: '验证码已发送', icon: 'success'});
       return
     }
     Taro.showToast({title: res.message || '发送失败', icon: 'none'})
+    refreshResetCaptcha()
   } catch {
     Taro.showToast({title: '发送失败', icon: 'none'})
+    refreshResetCaptcha()
   }
 }
 
@@ -587,6 +658,19 @@ onUnmounted(() => {
 .code-btn--disabled .code-btn-text {
   color: #9ca3af;
   font-weight: 400;
+}
+
+.captcha-wrap {
+  padding-right: 12rpx;
+}
+
+.captcha-img {
+  width: 160rpx;
+  height: 72rpx;
+  border-radius: 10rpx;
+  background-color: #f3f4f6;
+  margin-left: 12rpx;
+  flex-shrink: 0;
 }
 
 /* ===== 链接行 ===== */
