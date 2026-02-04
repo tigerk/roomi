@@ -12,7 +12,10 @@ export function syncTabbarByRoute(route?: string) {
   const pages = Taro.getCurrentPages()
   const currentRoute = route || pages[pages.length - 1]?.route || 'pages/home/index'
   const index = routeIndexMap[currentRoute] ?? 0
-  Taro.eventCenter.trigger('tabbar:change', { index, route: currentRoute })
+  // 使用 nextTick 确保 tabbar 组件已挂载
+  setTimeout(() => {
+    Taro.eventCenter.trigger('tabbar:change', {index, route: currentRoute})
+  }, 0)
 }
 
 export function getTabbarIndex(route: string) {

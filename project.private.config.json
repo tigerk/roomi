@@ -1,7 +1,8 @@
 {
   "appid": "你的真实appid",
   "setting": {
-    "urlCheck": false
+    "urlCheck": false,
+    "compileHotReLoad": true
   },
   "libVersion": "3.14.1"
 }

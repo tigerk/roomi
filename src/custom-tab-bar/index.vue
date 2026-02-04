@@ -5,12 +5,12 @@
         v-for="item in tabs"
         :key="item.pagePath"
         class="tab-item"
-        :class="{ 'tab-item--active': selected === item.index }"
+        :class="{ 'tab-item--active': currentIndex === item.index }"
         @click="handleSwitch(item)"
       >
         <image
           class="tab-icon"
-          :src="selected === item.index ? item.activeIcon : item.icon"
+          :src="currentIndex === item.index ? item.activeIcon : item.icon"
           mode="aspectFit"
         />
         <text class="tab-text">{{ item.text }}</text>
@@ -22,7 +22,8 @@
 
 <script setup lang="ts">
 import Taro from '@tarojs/taro'
-import {ref} from 'vue'
+import {ref, onMounted, onUnmounted} from 'vue'
+import {getTabbarIndex} from '@/utils/tabbar'
 
 interface TabItem {
   index: number
@@ -70,25 +71,51 @@ const tabs: TabItem[] = [
   }
 ]
 
-// 当前选中的 index
-const selected = ref(0)
+// 当前选中的 index - 初始化时根据当前路由设置
+const currentIndex = ref(0)
+
+// 初始化时根据当前页面路由设置选中状态
+function initSelectedIndex() {
+  const pages = Taro.getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  if (currentPage?.route) {
+    currentIndex.value = getTabbarIndex(currentPage.route)
+  }
+}
+
+// 监听 tabbar 变化事件
+function onTabbarChange(data: { index: number }) {
+  currentIndex.value = data.index
+}
+
+onMounted(() => {
+  initSelectedIndex()
+  Taro.eventCenter.on('tabbar:change', onTabbarChange)
+})
+
+onUnmounted(() => {
+  Taro.eventCenter.off('tabbar:change', onTabbarChange)
+})
 
 // 切换 Tab
 function handleSwitch(item: TabItem) {
-  if (selected.value === item.index) return
+  if (currentIndex.value === item.index) return
+
+  // 先更新选中状态，避免视觉延迟
+  currentIndex.value = item.index
+
+  // 触发事件通知其他页面的 tabbar
+  Taro.eventCenter.trigger('tabbar:change', {index: item.index})
 
   Taro.switchTab({
-    url: item.pagePath,
-    success: () => {
-      selected.value = item.index
-    }
+    url: item.pagePath
   })
 }
 
 // 暴露方法供页面调用更新选中状态
 defineExpose({
   setSelected: (index: number) => {
-    selected.value = index
+    currentIndex.value = index
   }
 })
 </script>
@@ -117,6 +144,8 @@ defineExpose({
   align-items: center;
   justify-content: center;
   gap: 6rpx;
+  /* 防止点击时的布局抖动 */
+  min-width: 0;
 }
 
 .tab-item:active {
@@ -126,12 +155,16 @@ defineExpose({
 .tab-icon {
   width: 48rpx;
   height: 48rpx;
+  /* 固定图标尺寸，防止切换时抖动 */
+  flex-shrink: 0;
 }
 
 .tab-text {
   font-size: 24rpx;
   color: #8a8f99;
   line-height: 1.2;
+  /* 防止文字宽度变化导致抖动 */
+  white-space: nowrap;
 }
 
 .tab-item--active .tab-text {
