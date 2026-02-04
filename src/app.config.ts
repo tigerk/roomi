@@ -15,28 +15,38 @@ export default {
   },
   tabBar: {
     color: '#8a8f99',
-    selectedColor: '#1f6feb',
+    selectedColor: '#3478F6',
     backgroundColor: '#ffffff',
     list: [
       {
         pagePath: 'pages/home/index',
-        text: '工作台'
+        text: '工作台',
+        iconPath: 'assets/tabbar/home.png',
+        selectedIconPath: 'assets/tabbar/home-active.png'
       },
       {
         pagePath: 'pages/room/index',
-        text: '房源'
+        text: '房源',
+        iconPath: 'assets/tabbar/room.png',
+        selectedIconPath: 'assets/tabbar/room-active.png'
       },
       {
         pagePath: 'pages/contract/index',
-        text: '合同'
+        text: '合同',
+        iconPath: 'assets/tabbar/contract.png',
+        selectedIconPath: 'assets/tabbar/contract-active.png'
       },
       {
         pagePath: 'pages/approval/index',
-        text: '审批'
+        text: '审批',
+        iconPath: 'assets/tabbar/approval.png',
+        selectedIconPath: 'assets/tabbar/approval-active.png'
       },
       {
         pagePath: 'pages/profile/index',
-        text: '我的'
+        text: '我的',
+        iconPath: 'assets/tabbar/profile.png',
+        selectedIconPath: 'assets/tabbar/profile-active.png'
       }
     ]
   }

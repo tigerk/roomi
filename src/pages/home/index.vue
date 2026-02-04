@@ -20,9 +20,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useDidShow } from '@tarojs/taro'
-import { getTodoCount } from '../../api/approval'
-import { ensureLoggedIn } from '../../services/auth'
-import { getUser } from '../../services/storage'
+import { getTodoCount } from '@/api/approval'
+import { ensureLoggedIn } from '@/services/auth'
+import { getUser } from '@/services/storage'
 
 const todoCount = ref(0)
 const nickname = ref('')
