@@ -28,3 +28,16 @@ page {
   font-weight: 600;
   margin-bottom: 16rpx;
 }
+
+/* 统一 H5 和小程序的基础表现 */
+view, text, image {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* H5 下 text 会变成 span（inline），需要改成和小程序一致 */
+text {
+  display: inline;
+  line-height: 1.4;
+}
